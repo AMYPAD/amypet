@@ -153,27 +153,30 @@ def align_break_petct(niidat, cts, Cnt, qcpth=None, refpetidx=None, segment_ct=F
         # > CT reference and CoM correction for registration
         mudct = nimpa.getnii(cts[i_acq], output='all')
         mu = nimpa.ct2mu(mudct['im'])
+        mu[np.isnan(mu)] = 0
         fmu = algnpth/('ct2mu_{}.nii.gz'.format(i_acq+1))
         nimpa.array2nii(mu, mudct['affine'], fmu, trnsp=mudct['transpose'], flip=mudct['flip'])
 
-        # > mu-map as reference in PET space
-        fres = nimpa.resample_spm(
-            imfrms[0], fmu, np.eye(4), fimout=algnpth/(cts[i_acq].name.split('.nii')[0]+'_inPET.nii.gz'),
-            del_ref_uncmpr=True, del_flo_uncmpr=True, del_out_uncmpr=True)
-
-        #~~~~~~~~~~~~~~~~~~~~
-        # > get rid of any NaNs
-        imd = nimpa.getnii(fres, output='all')
-        os.remove(fres)
-        im = imd['im']
-        im[np.isnan(im)] = 0
-        nimpa.array2nii(im, imd['affine'], fres, trnsp=imd['transpose'], flip=imd['flip'])
-        fres = Path(fres)
-        #~~~~~~~~~~~~~~~~~~~~
+        # # > mu-map as reference in PET space
+        # fres = nimpa.resample_spm(
+        #     imfrms[0], fmu, np.eye(4), fimout=algnpth/(cts[i_acq].name.split('.nii')[0]+'_inPET.nii.gz'),
+        #     del_ref_uncmpr=True, del_flo_uncmpr=True, del_out_uncmpr=True)
+        # #~~~~~~~~~~~~~~~~~~~~
+        # # > get rid of any NaNs
+        # imd = nimpa.getnii(fres, output='all')
+        # os.remove(fres)
+        # im = imd['im']
+        # im[np.isnan(im)] = 0
+        # nimpa.array2nii(im, imd['affine'], fres, trnsp=imd['transpose'], flip=imd['flip'])
+        # fres = Path(fres)
+        # #~~~~~~~~~~~~~~~~~~~~
+        # # > CT centre of mass (CoM)
+        # fctcom = fres.parent/(fres.name.split('.nii')[0]+'_CoM-modified.nii')
+        # dctcom = nimpa.centre_mass_corr(fres, fout=fctcom)
 
         # > CT centre of mass (CoM)
-        fctcom = fres.parent/(fres.name.split('.nii')[0]+'_CoM-modified.nii')
-        dctcom = nimpa.centre_mass_corr(fres, fout=fctcom)
+        fctcom = fmu.parent/(fmu.name.split('.nii')[0]+'_CoM-modified.nii')
+        dctcom = nimpa.centre_mass_corr(fmu, fout=fctcom)
         log.info(f'Modified CoM (CT): {fctcom}')
 
         # > CT reference image for CT registration and optionally PET
@@ -203,12 +206,12 @@ def align_break_petct(niidat, cts, Cnt, qcpth=None, refpetidx=None, segment_ct=F
             fct_seg = ctseg_out/'temp_ct_seg.nii.gz'
             nimpa.array2nii(ct_seg, mudct['affine'], ctseg_out/'temp_ct_seg.nii.gz', trnsp=mudct['transpose'], flip=mudct['flip'])
 
-            fseg_pet = nimpa.resample_spm(
-                imfrms[0], fct_seg, np.eye(4), fimout=ctseg_out/('CT_seg_part-{}_inPET.nii.gz'.format(i_acq+1)),
-                del_ref_uncmpr=True, del_flo_uncmpr=True, del_out_uncmpr=True)
+            # fseg_pet = nimpa.resample_spm(
+            #     imfrms[0], fct_seg, np.eye(4), fimout=ctseg_out/('CT_seg_part-{}_inPET.nii.gz'.format(i_acq+1)),
+            #     del_ref_uncmpr=True, del_flo_uncmpr=True, del_out_uncmpr=True)
 
-            fsegcom = ctseg_out/('CT_seg_part-{}_inPET_CoM.nii.gz'.format(i_acq+1))
-            nimpa.centre_mass_corr(fseg_pet, fout=fsegcom, com=dctcom['com_abs'])
+            fsegcom = ctseg_out/('CT_seg_part-{}_CoM.nii.gz'.format(['A','B'][i_acq]))
+            nimpa.centre_mass_corr(fct_seg, fout=fsegcom, com=dctcom['com_abs'])
 
             fctseg[i_acq] = fsegcom
 
@@ -477,9 +480,9 @@ def align_break_petct(niidat, cts, Cnt, qcpth=None, refpetidx=None, segment_ct=F
         fsegA = ctseg_out/(fctseg[0].name.split('.nii')[0]+'__aligned.nii.gz')
         fsegB = ctseg_out/(fctseg[1].name.split('.nii')[0]+'__aligned.nii.gz')
 
-        fsegA_ = nimpa.resample_spm(fpetA_avg, fctseg[0], M_Ainv, fimout=fsegA,
+        fsegA_ = nimpa.resample_spm(fpetA_avg, fctseg[0], M_Ainv, intrp=0, fimout=fsegA,
                 del_ref_uncmpr=True, del_flo_uncmpr=True, del_out_uncmpr=True)
-        fsegB_ = nimpa.resample_spm(fpetB_avg, fctseg[1], M_B, fimout=fsegB,
+        fsegB_ = nimpa.resample_spm(fpetB_avg, fctseg[1], M_B, intrp=0, fimout=fsegB,
                 del_ref_uncmpr=True, del_flo_uncmpr=True, del_out_uncmpr=True)
 
         outdct['ct_seg'] = [fsegA, fsegB] #fctseg
