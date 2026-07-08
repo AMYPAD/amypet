@@ -530,7 +530,7 @@ def align_ur(
     # > number of PET frames in series with static/UR data
     nfrm = len(stat_tdata['descr']['frms'])
 
-    # > Nnumber of frames for uptake ratio image (UR/SUVr)
+    # > Number of frames for uptake ratio image (UR/SUVr)
     nsfrm = len(stat_tdata['descr']['ur']['frms'])
 
     # > NIfTI output folder

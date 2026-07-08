@@ -450,6 +450,7 @@ def explore_indicom(input_fldr, Cnt, tracer=None, ur_win_def=None, outpath=None,
                     acq_type = 'breakdyn'
                 elif t_frms[-1][-1] >= fulldyn_time:
                     acq_type = 'fulldyn'
+                    fulldyn_time = t_frms[-1][-1]
             elif t_frms[0][0] > 1:
                 acq_type = 'static'
         
@@ -477,7 +478,7 @@ def explore_indicom(input_fldr, Cnt, tracer=None, ur_win_def=None, outpath=None,
 
             elif acq_type == 'fulldyn':
                 t0_dyn = min(t_starts, key=lambda x: abs(x - 0))
-                t1_dyn = min(t_stops, key=lambda x: (x - fulldyn_time))
+                t1_dyn = min(t_stops, key=lambda x: abs(x - fulldyn_time))
 
                 frm_0 = t_starts.index(t0_dyn)
                 frm_1 = t_stops.index(t1_dyn)
@@ -717,7 +718,7 @@ def id_acq(dctdat, acq_type='ur', output_series_id=False):
     if len(acq_find) > 1:
         raise ValueError('too many UR/static DICOM series detected: only one is accepted')
     elif len(acq_find) == 0:
-        log.info('no fully dynamic data found.')
+        log.info(f'no fully dynamic data found for acquisition type: {acq_type}.')
         return None
     else:
         acq_find = acq_find[0]
